@@ -50,7 +50,7 @@ function Auth() {
           src={Logo} 
           alt="VYBE logo" 
           style={{ 
-            width: '22rem', 
+            width: '25rem', 
             height: 'auto',
             transition: 'transform 0.5s ease',
           }}

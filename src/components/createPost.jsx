@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import axios from 'axios';
 import {
   Dialog,
   DialogActions,
@@ -21,6 +22,8 @@ export default function CreatePost({ open, onClose }) {
   const [image, setImage] = useState(null);
   const [caption, setCaption] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastSeverity, setToastSeverity] = useState('success');
   const fileInputRef = useRef(null);
 
   const handleClose = () => {
@@ -32,19 +35,41 @@ export default function CreatePost({ open, onClose }) {
   const handleImageUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImage(e.target.result);
-      };
-      reader.readAsDataURL(file);
+      setImage(file);
     }
   };
 
-  const handlePost = () => {
-    // Here you would typically send the image and caption to your backend
-    console.log('Posting:', { image, caption });
-    setShowToast(true);
-    handleClose();
+  const handlePost = async () => {
+    if (!image) {
+      setToastMessage('Please upload an image.');
+      setToastSeverity('error');
+      setShowToast(true);
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('imgurl', image); // 'imgurl' should match the backend's multer setup
+      formData.append('description', caption);
+
+      const accessToken = localStorage.getItem('accessToken');
+
+      await axios.post('http://localhost:8000/api/v1/posts', formData, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setToastMessage('Post created successfully!');
+      setToastSeverity('success');
+      setShowToast(true);
+      handleClose();
+    } catch (error) {
+      setToastMessage(`Failed to create post: ${error.response?.data?.message || error.message}`);
+      setToastSeverity('error');
+      setShowToast(true);
+    }
   };
 
   const handleCloseToast = (event, reason) => {
@@ -81,6 +106,7 @@ export default function CreatePost({ open, onClose }) {
                 cursor: 'pointer',
               }}
               onClick={() => fileInputRef.current.click()}
+              aria-describedby="upload-description"
             >
               <input
                 type="file"
@@ -88,6 +114,7 @@ export default function CreatePost({ open, onClose }) {
                 ref={fileInputRef}
                 onChange={handleImageUpload}
                 accept="image/*"
+                aria-label="Upload Image"
               />
               <AddAPhoto sx={{ fontSize: 60, color: 'grey' }} />
               <Button>Upload from device</Button>
@@ -95,7 +122,7 @@ export default function CreatePost({ open, onClose }) {
           ) : (
             <Box sx={{ mt: 2 }}>
               <img
-                src={image}
+                src={URL.createObjectURL(image)}
                 alt="Preview"
                 style={{ width: '100%', height: 'auto', maxHeight: 300, objectFit: 'contain' }}
               />
@@ -121,9 +148,13 @@ export default function CreatePost({ open, onClose }) {
           </Button>
         </DialogActions>
       </Dialog>
-      <Snackbar open={showToast} autoHideDuration={6000} onClose={handleCloseToast}>
-        <Alert onClose={handleCloseToast} severity="success" sx={{ width: '100%' }}>
-          Post created successfully!
+      <Snackbar
+        open={showToast}
+        autoHideDuration={2000} // 2-second timer
+        onClose={handleCloseToast}
+      >
+        <Alert onClose={handleCloseToast} severity={toastSeverity} sx={{ width: '100%' }}>
+          {toastMessage}
         </Alert>
       </Snackbar>
     </>

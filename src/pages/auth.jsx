@@ -1,6 +1,10 @@
-// src/components/Auth.js
-import { Box, Button, TextField, Slide, Link } from '@mui/material';
+// src/components/Auth.jsx
 import React, { useState } from 'react';
+import axios from 'axios';
+import { Box, Button, TextField, Slide, Link } from '@mui/material';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { useNavigate } from 'react-router-dom'; // Ensure you're using react-router for navigation
 import Logo from '../assets/logo_light.png'; // Adjust the import path if needed
 
 const getButtonStyle = () => ({
@@ -16,6 +20,55 @@ const getButtonStyle = () => ({
 
 function Auth() {
   const [view, setView] = useState('default'); // default, signin, signup
+  const [formData, setFormData] = useState({ email: '', username: '', password: '' });
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSignUp = async () => {
+    try {
+      const response = await axios.post('http://localhost:8000/api/v1/users/signup', formData);
+      if (response.status === 201) {
+        toast.success('Signup successful! Redirecting to home page...');
+        setTimeout(() => {
+          navigate('/home'); // Redirect to the home page after signup
+        }, 2000);
+      } else {
+        toast.warn('Signup succeeded, but there was an issue.');
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 400) {
+        toast.error(error.response.data.message || 'Signup failed!');
+      } else {
+        toast.error('An unexpected error occurred during signup.');
+      }
+    }
+  };
+
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post('http://localhost:8000/api/v1/users/login', formData);
+      if (response.status === 200) {
+        const { accessToken, username } = response.data.data;
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('username', username);
+        toast.success(`Welcome, ${username}! Redirecting to home page...`);
+        setTimeout(() => {
+          navigate('/home'); // Redirect to the home page after login
+        }, 2000);
+      } else {
+        toast.warn('Login succeeded, but there was an issue.');
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 401) {
+        toast.error(error.response.data.message || 'Login failed!');
+      } else {
+        toast.error('An unexpected error occurred during login.');
+      }
+    }
+  };
 
   const handleSignInClick = () => {
     setView('signin');
@@ -31,7 +84,6 @@ function Auth() {
 
   return (
     <Box display="flex" height="100vh" maxHeight={655}>
-      
       {/* Logo Section */}
       <Box 
         flex={1} 
@@ -40,7 +92,7 @@ function Auth() {
         alignItems="center"
         sx={{ 
           transition: 'transform 0.5s ease',
-          transform: view === 'signup' ? 'translateX(100%)' : 'none', // Move logo to the right for signup view
+          transform: view === 'signup' ? 'translateX(100%)' : 'none', 
           cursor: view !== 'default' ? 'pointer' : 'default',
           zIndex:2
         }}
@@ -64,7 +116,7 @@ function Auth() {
           top={0}
           left={0}
           height="100%"
-          width="50%" // Adjust as needed
+          width="50%"
           sx={{ 
             transition: 'all 0.5s ease', 
           }}
@@ -81,19 +133,28 @@ function Auth() {
             >
               <TextField 
                 label="Email" 
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
                 variant="outlined" 
                 fullWidth 
                 sx={{ marginBottom: '1rem' }} 
               />
               <TextField 
                 label="Username" 
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
                 variant="outlined" 
                 fullWidth 
                 sx={{ marginBottom: '1rem' }} 
               />
               <TextField 
                 label="Password" 
+                name="password"
                 type="password" 
+                value={formData.password}
+                onChange={handleChange}
                 variant="outlined" 
                 fullWidth 
                 sx={{ marginBottom: '1.5rem' }} 
@@ -106,6 +167,7 @@ function Auth() {
                   '&:hover': { backgroundColor: '#89112c' },
                   marginBottom: '1rem',
                 }}
+                onClick={handleSignUp}
               >
                 Sign Up
               </Button>
@@ -170,18 +232,24 @@ function Auth() {
                 width: '100%',
                 height: '100%',
                 padding: '0 2rem',
-                boxSizing: 'border-box',
+                boxSizing:"border-box",
               }}
             >
               <TextField 
                 label="Username" 
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
                 variant="outlined" 
                 fullWidth 
                 sx={{ marginBottom: '1rem' }} 
               />
               <TextField 
                 label="Password" 
+                name="password"
                 type="password" 
+                value={formData.password}
+                onChange={handleChange}
                 variant="outlined" 
                 fullWidth 
                 sx={{ marginBottom: '1.5rem' }} 
@@ -194,6 +262,7 @@ function Auth() {
                   '&:hover': { backgroundColor: '#89112c' },
                   marginBottom: '1rem',
                 }}
+                onClick={handleLogin}
               >
                 Login
               </Button>
@@ -208,6 +277,8 @@ function Auth() {
           </Slide>
         )}
       </Box>
+
+      <ToastContainer />
     </Box>
   );
 }

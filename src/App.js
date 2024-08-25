@@ -15,7 +15,7 @@ function App() {
       <PageLayout>
         <Routes>
           <Route path="/" element={<Auth />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/" element={<Profile />} />
           <Route path="/edit-profile" element={<EditProfile />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/chat" element={<Chat />} />

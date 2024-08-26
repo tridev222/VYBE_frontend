@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, Typography, Grid, Card, CardContent, CardMedia, Modal, Backdrop, Fade } from '@mui/material';
+import {
+  Box, Button, Typography, Grid, Card, CardMedia, Modal, Backdrop, Fade
+} from '@mui/material';
 import { Link } from 'react-router-dom';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import CommentIcon from '@mui/icons-material/Comment';
 import PersonIcon from '@mui/icons-material/Person';
 import GroupIcon from '@mui/icons-material/Group';
 import axios from 'axios';
-
-// Import the default profile image
 import defaultProfileImage from '../assets/default_profile.jpg';
 
 const getButtonStyle = () => ({
@@ -27,15 +27,15 @@ export default function Profile() {
   const [user, setUser] = useState({
     username: 'Sample User',
     bio: '',
-    profilePicture: '', // Updated to match backend field
+    profilePicture: '',
     followers: 0,
     following: 0,
     posts: [],
   });
 
-  const [open, setOpen] = useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const [loading, setLoading] = useState(true);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [postCount, setPostCount] = useState(0);
 
   const fetchUserProfile = async () => {
     try {
@@ -55,14 +55,30 @@ export default function Profile() {
 
       if (response.status === 200) {
         const userData = response.data.data;
+
+        // Fetch posts only if user has posts
+        let posts = [];
+        if (userData.posts.length > 0) {
+          const postResponse = await axios.get(`http://localhost:8000/api/v1/posts/user/${username}`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+          if (postResponse.status === 200) {
+            posts = postResponse.data;
+          }
+        }
+
         setUser({
           username: userData.username || 'Sample User',
           bio: userData.description || 'This user has no bio.',
-          profilePicture: userData.profilePicture || '', // Updated to match backend field
+          profilePicture: userData.profilePicture || '',
           followers: userData.followers ? userData.followers.length : 0,
           following: userData.followings ? userData.followings.length : 0,
-          posts: userData.posts || [],
+          posts: posts || [],
         });
+        setPostCount(posts.length);  // Set the post count
+        setLoading(false);
       } else {
         console.error("Failed to fetch user data", response.statusText);
       }
@@ -74,19 +90,27 @@ export default function Profile() {
   useEffect(() => {
     fetchUserProfile();
 
-    // Set up an interval to refresh followers and following counts every 30 seconds
+    // Set up an interval to refresh followers, following counts, and posts every 30 seconds
     const intervalId = setInterval(fetchUserProfile, 30000);
 
     return () => clearInterval(intervalId); // Cleanup interval on component unmount
   }, []);
 
+  const handleOpenProfileModal = () => {
+    setIsProfileModalOpen(true);
+  };
+
+  const handleCloseProfileModal = () => {
+    setIsProfileModalOpen(false);
+  };
+
   return (
-    <Box sx={{ minHeight: '85vh', backgroundColor: '#fffff', p: 4, ml: 4 }}>
+    <Box sx={{ minHeight: '85vh', backgroundColor: '#fff', p: 4, ml: 4 }}>
       <Box sx={{ display: 'flex', gap: 4, alignItems: 'center', pb: 4, borderBottom: '1px solid #ccc' }}>
         <Box 
           sx={{ 
-            width: 134, // Increased width by 6px
-            height: 134, // Increased height by 6px
+            width: 134,
+            height: 134,
             borderRadius: '50%', 
             overflow: 'hidden', 
             display: 'flex', 
@@ -94,10 +118,10 @@ export default function Profile() {
             justifyContent: 'center',
             cursor: 'pointer',
           }}
-          onClick={handleOpen}
+          onClick={handleOpenProfileModal}
         >
           <img
-            src={user.profilePicture ? user.profilePicture : defaultProfileImage} // Updated to match backend field
+            src={user.profilePicture ? user.profilePicture : defaultProfileImage}
             alt={user.username}
             style={{ 
               width: '100%', 
@@ -135,36 +159,14 @@ export default function Profile() {
       </Box>
 
       <Box sx={{ pt: 4 }}>
-        <Typography variant="h5" component="h2">Posts</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h5" component="h2">Posts</Typography>
+          <Typography variant="body2" color="textSecondary">
+            {postCount} {postCount === 1 ? 'Post' : 'Posts'}
+          </Typography>
+        </Box>
         <Grid container spacing={4} sx={{ pt: 2 }}>
-          {user.posts.length > 0 ? (
-            user.posts.map((post, index) => (
-              <Grid item xs={12} sm={6} md={4} key={index}>
-                <Card 
-                  sx={{
-                    padding: '16px', // Add some padding to make the card slightly larger
-                    height: '100%', // Ensure cards have consistent height
-                    boxShadow: 3, // Add a slight shadow for emphasis
-                  }}
-                >
-                  <CardMedia
-                    component="img"
-                    height="210" // Increase the image height slightly (was 200)
-                    image={post.image || '/placeholder.svg'}
-                    alt={`Post ${index + 1}`}
-                  />
-                  <CardContent>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                      <FavoriteIcon fontSize="small" />
-                      <Typography>{post.likes || 0} Likes</Typography>
-                      <CommentIcon fontSize="small" />
-                      <Typography>{post.comments || 0} Comments</Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))
-          ) : (
+          {loading ? (
             <Typography 
               sx={{ 
                 textAlign: 'center', 
@@ -174,23 +176,97 @@ export default function Profile() {
                 mt: 4 
               }}
             >
-              No posts yet.
+              Loading posts...
             </Typography>
+          ) : (
+            user.posts.length > 0 ? (
+              user.posts.map((post, index) => (
+                <Grid item xs={12} sm={6} md={4} key={index}>
+                  <Card 
+                    sx={{
+                      position: 'relative',
+                      width: '100%',
+                      height: 0,
+                      paddingBottom: '75%',
+                      boxShadow: 3,
+                      overflow: 'hidden',
+                      '&:hover .overlay': {
+                        opacity: 1,
+                      }
+                    }}
+                  >
+                    <CardMedia
+                      component="img"
+                      image={post.imgurl}
+                      alt={`Post ${index + 1}`}
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        transition: 'transform 0.3s ease-in-out',
+                        '&:hover': {
+                          transform: 'scale(1.1)',
+                        },
+                      }}
+                    />
+                    <Box
+                      className="overlay"
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        color: 'white',
+                        opacity: 0,
+                        transition: 'opacity 0.3s ease-in-out',
+                      }}
+                    >
+                      <Box sx={{ textAlign: 'center' }}>
+                        <FavoriteIcon fontSize="small" />
+                        <Typography>{post.likes?.length || 0} Likes</Typography>
+                        <CommentIcon fontSize="small" />
+                        <Typography>{post.comments?.length || 0} Comments</Typography>
+                      </Box>
+                    </Box>
+                  </Card>
+                </Grid>
+              ))
+            ) : (
+              <Typography 
+                sx={{ 
+                  textAlign: 'center', 
+                  width: '100%', 
+                  color: 'grey', 
+                  fontWeight: 'bold', 
+                  mt: 4 
+                }}
+              >
+                No posts available.
+              </Typography>
+            )
           )}
         </Grid>
       </Box>
 
-      {/* Modal for the enlarged image */}
+      {/* Modal for Profile Picture */}
       <Modal
-        open={open}
-        onClose={handleClose}
+        open={isProfileModalOpen}
+        onClose={handleCloseProfileModal}
         closeAfterTransition
         BackdropComponent={Backdrop}
         BackdropProps={{
           timeout: 500,
         }}
       >
-        <Fade in={open}>
+        <Fade in={isProfileModalOpen}>
           <Box
             sx={{
               position: 'absolute',
@@ -211,7 +287,7 @@ export default function Profile() {
             }}
           >
             <img
-              src={user.profilePicture ? user.profilePicture : defaultProfileImage} // Updated to match backend field
+              src={user.profilePicture ? user.profilePicture : defaultProfileImage}
               alt={user.username}
               style={{
                 width: '100%',

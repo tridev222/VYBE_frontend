@@ -1,101 +1,93 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import axios from 'axios';
 import { Box, Typography, List, ListItem, ListItemAvatar, Avatar, ListItemText, Button, Divider, Link, IconButton } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
-// Default placeholder avatar URL
 const defaultAvatar = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIj4KICA8Y2lyY2xlIGN4PSI3MCIgY3k9IjcwIiByPSI3MCIgc3Ryb2tlLXdpZHRoPSIxIiBzdHJva2UtY29sb3I9InJnYmEiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==';
 const accessToken = localStorage.getItem('accessToken');
-const username = localStorage.getItem('username');
 
 const UserSuggestions = () => {
   const [suggestions, setSuggestions] = useState([]);
-  const [followedUsers, setFollowedUsers] = useState(new Set()); // Track followed users
+  const [followedUsers, setFollowedUsers] = useState(new Set());
+  const [loggedInUserId, setLoggedInUserId] = useState(null);
 
-  const fetchFollowedUsers = async () => {
+  // Fetch the logged-in user's ID using the access token
+  const fetchLoggedInUserId = useCallback(async () => {
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/${username}/following`, {
-        method: 'GET',
+      const response = await axios.get('http://localhost:8000/api/v1/auth/me', {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      const data = await response.json();
-      const followedUserIds = new Set(data.following.map(user => user._id));
+      setLoggedInUserId(response.data.user._id);
+    } catch (error) {
+      console.error('Error fetching logged-in user ID:', error);
+    }
+  }, []);
+
+  const fetchFollowedUsers = useCallback(async () => {
+    try {
+      const response = await axios.get(`http://localhost:8000/api/v1/users/${loggedInUserId}/following`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const followedUserIds = new Set(response.data.following.map(user => user._id));
       setFollowedUsers(followedUserIds);
     } catch (error) {
       console.error('Error fetching followed users:', error);
     }
-  };
+  }, [loggedInUserId]);
 
-  const fetchSuggestions = async () => {
+  const fetchProfilePicture = useCallback(async (username) => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/users/suggest/random', {
-        method: 'GET',
+      const response = await axios.get(`http://localhost:8000/api/v1/users/${username}`, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
-      if (!response.ok) {
-        throw new Error(`Network response was not ok: ${response.statusText}`);
-      }
-      const data = await response.json();
-      setSuggestions(data.data);
+      return response.data.data.profilePicture || defaultAvatar;
+    } catch (error) {
+      console.error('Error fetching profile picture:', error);
+      return defaultAvatar;
+    }
+  }, []);
+
+  const fetchSuggestions = useCallback(async () => {
+    try {
+      const response = await axios.get('http://localhost:8000/api/v1/users/suggest/random', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      // Filter out the logged-in user based on ID
+      const filteredSuggestions = response.data.data.filter(user => user._id !== loggedInUserId);
+
+      // Fetch profile pictures for each user
+      const usersWithProfilePics = await Promise.all(
+        filteredSuggestions.map(async (user) => {
+          const profilePicture = await fetchProfilePicture(user.username);
+          return { ...user, profilePicture };
+        })
+      );
+
+      setSuggestions(usersWithProfilePics);
     } catch (error) {
       console.error('Error fetching user suggestions:', error);
     }
-  };
-
-  useEffect(() => {
-    fetchFollowedUsers();
-    fetchSuggestions();
-  }, []);
-
-  const getUserIdByUsername = async (username) => {
-    try {
-      const response = await fetch(`/api/v1/users/${username}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        if (text.startsWith('<!DOCTYPE')) {
-          throw new Error('Received HTML response instead of JSON. Please check the API endpoint or server.');
-        }
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.data._id;
-    } catch (error) {
-      console.error('Error fetching user ID:', error);
-    }
-  };
+  }, [loggedInUserId, fetchProfilePicture]);
 
   const handleFollow = async (username) => {
     try {
       const userIdToFollow = await getUserIdByUsername(username);
       if (!userIdToFollow) return;
 
-      const response = await fetch(`/api/v1/users/${username}/follow`, {
-        method: 'PUT',
+      await axios.put(`/api/v1/users/${username}/follow`, {}, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
 
       setFollowedUsers(prev => new Set(prev).add(userIdToFollow));
     } catch (error) {
@@ -108,17 +100,11 @@ const UserSuggestions = () => {
       const userIdToUnfollow = await getUserIdByUsername(username);
       if (!userIdToUnfollow) return;
 
-      const response = await fetch(`/api/v1/users/${username}/unfollow`, {
-        method: 'PUT',
+      await axios.put(`/api/v1/users/${username}/unfollow`, {}, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
 
       setFollowedUsers(prev => {
         const updated = new Set(prev);
@@ -129,6 +115,31 @@ const UserSuggestions = () => {
       console.error('Error unfollowing user:', error);
     }
   };
+
+  const getUserIdByUsername = useCallback(async (username) => {
+    try {
+      const response = await axios.get(`/api/v1/users/${username}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      return response.data.data._id;
+    } catch (error) {
+      console.error('Error fetching user ID:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLoggedInUserId();
+  }, [fetchLoggedInUserId]);
+
+  useEffect(() => {
+    if (loggedInUserId) {
+      fetchFollowedUsers();
+      fetchSuggestions();
+    }
+  }, [loggedInUserId, fetchFollowedUsers, fetchSuggestions]);
 
   return (
     <Box sx={{ width: 300, padding: 2 }}>
@@ -186,11 +197,10 @@ const UserSuggestions = () => {
         <Link href="#" variant="caption" underline="hover" sx={{ color: 'grey.600' }}>Terms</Link>
         <Link href="#" variant="caption" underline="hover" sx={{ color: 'grey.600' }}>Locations</Link>
         <Link href="#" variant="caption" underline="hover" sx={{ color: 'grey.600' }}>Language</Link>
-        <Link href="#" variant="caption" underline="hover" sx={{ color: 'grey.600' }}>Meta Verified</Link>
       </Box>
 
       <Typography variant="caption" color="textSecondary" sx={{ textAlign: 'center', marginTop: 2 }}>
-        © 2024 Instagram from Meta
+        © 2024 VYBE
       </Typography>
     </Box>
   );

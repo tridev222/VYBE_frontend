@@ -1,40 +1,79 @@
-import React, { useState } from 'react';
-import { Drawer, IconButton, Box, TextField, Divider, Typography, Button, CircularProgress } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Drawer, IconButton, Box, TextField, Divider, Typography, Button, CircularProgress, Avatar } from '@mui/material';
 import { Clear as ClearIcon } from '@mui/icons-material';
+import defaultProfileImage from '../assets/default_profile.jpg'; // Import your default profile image
+
+// Create a base Axios instance
+const apiClient = axios.create({
+  baseURL: 'http://localhost:8000/api/v1', // Use the correct base URL here
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 const SearchPanel = ({ open, onClose }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [followedUsers, setFollowedUsers] = useState(new Set()); // Track followed users
+  const [followedUsers, setFollowedUsers] = useState(new Set());
 
-  // Get values from local storage
   const accessToken = localStorage.getItem('accessToken');
+
+  useEffect(() => {
+    if (!open) {
+      setQuery('');
+      setResults([]);
+    }
+  }, [open]);
+
+  const fetchProfilePicture = async (username) => {
+    try {
+      const response = await apiClient.get(`/users/${username}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (response.status === 200) {
+        return response.data.data.profilePicture || defaultProfileImage;
+      } else {
+        return defaultProfileImage;
+      }
+    } catch (error) {
+      console.error('Error fetching profile picture:', error);
+      return defaultProfileImage;
+    }
+  };
 
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/v1/users/search?query=${query}`, {
-        method: 'GET',
+      const response = await apiClient.get(`/users/search`, {
+        params: { query: query },
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
+          'Authorization': `Bearer ${accessToken}`,
         },
       });
 
-      if (!response.ok) {
-        const text = await response.text();
-        if (text.startsWith('<!DOCTYPE')) {
-          throw new Error(` ${response.status}Received HTML response instead of JSON. Please check the API endpoint or server: ${response.status}`);
-        }
+      if (response.status === 200) {
+        const users = response.data.data || [];
+
+        // Fetch profile pictures for each user
+        const usersWithProfilePics = await Promise.all(
+          users.map(async (user) => {
+            const profilePicture = await fetchProfilePicture(user.username);
+            return { ...user, profilePicture };
+          })
+        );
+
+        setResults(usersWithProfilePics);
+      } else {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-
-      const data = await response.json();
-      setResults(data.data || []); // Safeguard in case `data` or `data.data` is undefined
     } catch (error) {
       console.error('Error fetching users:', error);
-      setResults([]); // Clear results on error
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -42,24 +81,17 @@ const SearchPanel = ({ open, onClose }) => {
 
   const getUserIdByUsername = async (username) => {
     try {
-      const response = await fetch(`/api/v1/users/${username}`, {
-        method: 'GET',
+      const response = await apiClient.get(`/users/${username}`, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         },
       });
 
-      if (!response.ok) {
-        const text = await response.text();
-        if (text.startsWith('<!DOCTYPE')) {
-          throw new Error('Received HTML response instead of JSON. Please check the API endpoint or server.');
-        }
+      if (response.status === 200) {
+        return response.data.data.__id;
+      } else {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-
-      const data = await response.json();
-      return data.data._id; // Return the user ID
     } catch (error) {
       console.error('Error fetching user ID:', error);
     }
@@ -67,19 +99,18 @@ const SearchPanel = ({ open, onClose }) => {
 
   const handleFollow = async (username) => {
     try {
-      const response = await fetch(`/api/v1/users/${username}/follow`, {
-        method: 'PUT',
+      const userIdToFollow = await getUserIdByUsername(username);
+      const response = await apiClient.put(`/users/${username}/follow`, {}, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         },
       });
 
-      if (!response.ok) {
+      if (response.status === 200) {
+        setFollowedUsers(prev => new Set(prev).add(userIdToFollow));
+      } else {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-      const userIdToFollow = await getUserIdByUsername(username);
-      setFollowedUsers(prev => new Set(prev).add(userIdToFollow)); // Update followed users state
     } catch (error) {
       console.error('Error following user:', error);
     }
@@ -88,23 +119,21 @@ const SearchPanel = ({ open, onClose }) => {
   const handleUnfollow = async (username) => {
     try {
       const userIdToUnfollow = await getUserIdByUsername(username);
-      const response = await fetch(`/api/v1/users/${username}/follow`, {
-        method: 'PUT',
+      const response = await apiClient.put(`/users/${username}/unfollow`, {}, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         },
       });
 
-      if (!response.ok) {
+      if (response.status === 200) {
+        setFollowedUsers(prev => {
+          const updated = new Set(prev);
+          updated.delete(userIdToUnfollow);
+          return updated;
+        });
+      } else {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-
-      setFollowedUsers(prev => {
-        const updated = new Set(prev);
-        updated.delete(userIdToUnfollow);
-        return updated;
-      }); // Update followed users state
     } catch (error) {
       console.error('Error unfollowing user:', error);
     }
@@ -178,13 +207,13 @@ const SearchPanel = ({ open, onClose }) => {
             <CircularProgress />
           </Box>
         ) : results.length > 0 ? (
-          <Box>
+          <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>  {/* Enable scrolling */}
             {results.map((user) => (
               <Box key={user._id} sx={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
-                <img
-                  src={user.profilePicture || 'person/noAvatar.png'}
+                <Avatar
+                  src={user.profilePicture || defaultProfileImage} // Use the user's profile picture or default
                   alt={user.username}
-                  style={{ width: 50, height: 50, marginRight: 10, borderRadius: '50%' }}
+                  sx={{ width: 50, height: 50, marginRight: 1, borderRadius: '50%' }}
                 />
                 <Typography variant="body1" sx={{ flexGrow: 1 }}>
                   {user.username}

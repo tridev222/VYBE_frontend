@@ -33,7 +33,7 @@ function Auth() {
       if (response.status === 201) {
         toast.success('Signup successful! Redirecting to home page...');
         setTimeout(() => {
-          navigate('/home'); // Redirect to the home page after signup
+          navigate('/'); // Redirect to the home page after signup
         }, 2000);
       } else {
         toast.warn('Signup succeeded, but there was an issue.');

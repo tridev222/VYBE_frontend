@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Box, List, ListItem, ListItemIcon, ListItemText, useMediaQuery, Avatar } from '@mui/material';
-import { Home as HomeIcon, Search as SearchIcon, Explore as ExploreIcon, AddBox as CreateIcon, Menu as MenuIcon } from '@mui/icons-material';
-import ChatIcon from '@mui/icons-material/Chat';
+import { Home as HomeIcon, Search as SearchIcon, Explore as ExploreIcon, AddBox as CreateIcon, Logout as LogoutIcon } from '@mui/icons-material';
 import SearchPanel from './SearchPanel';
-import More from './More';
-import CreatePost from './createPost'; // Import the CreatePost component
+import CreatePost from './createPost';
 import { styled } from '@mui/material/styles';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Logo from '../assets/logo_light.png';
 import LogoIcon from '../assets/logo_icon_light.png';
 import axios from 'axios';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import defaultProfileImage from '../assets/default_profile.jpg'; // Placeholder for profile pic
 
 // Drawer width
@@ -37,38 +37,35 @@ const InstagramLogo = styled(Box)(({ isCollapsed }) => ({
   zIndex: 2,
 }));
 
+// Styled Logout Icon
+const StyledLogoutIcon = styled(LogoutIcon)(({ theme }) => ({
+  color: '#a81434', // Ruby color
+  fontSize: '32px',
+}));
+
 const SideNav = () => {
   const [isSearchOpen, setSearchOpen] = useState(false);
   const [isCollapsed, setCollapsed] = useState(false);
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const [isCreatePostOpen, setCreatePostOpen] = useState(false); // State for CreatePost dialog
-  const [activeTab, setActiveTab] = useState('/home'); // Store the last active tab
-  const [lastActiveTab, setLastActiveTab] = useState('/home'); // Store the last active tab excluding search
-  const [profilePic, setProfilePic] = useState(null); // State to hold the profile picture URL
+  const [isCreatePostOpen, setCreatePostOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('/home');
+  const [profilePic, setProfilePic] = useState(null);
+  const navigate = useNavigate();
 
-  const location = useLocation(); // Get current location
+  const location = useLocation();
   const isSmallScreen = useMediaQuery('(max-width: 600px)');
 
   // Handle state reset when navigating to a new route
   useEffect(() => {
     const path = location.pathname;
-    
+
     if (path !== activeTab) {
-      if (path === '/chat') {
-        setCollapsed(true); // Collapse sidebar for chat
-      } else {
-        setCollapsed(false); // Expand sidebar for other routes
-      }
-      
-      setSearchOpen(false); // Close search panel
-      setActiveTab(path); // Update active tab
-      if (path !== '/search') { // Update last active tab excluding search
-        setLastActiveTab(path);
-      }
+      setSearchOpen(false);
+      setActiveTab(path);
+      setCollapsed(false); // Reset the collapsed state when navigating
     }
   }, [location, activeTab]);
 
-  // Fetch the profile picture (same logic as in Profile component)
+  // Fetch the profile picture
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -101,30 +98,62 @@ const SideNav = () => {
     fetchUserProfile();
   }, []);
 
-  const handleMoreClick = () => {
-    setIsMoreOpen(!isMoreOpen); // Toggle the state
-  };
-
   const handleSearchClick = () => {
     setSearchOpen(!isSearchOpen);
-    setCollapsed(true); // Collapse sidebar when search is opened
-  };
-
-  const handleChatClick = () => {
-    if (activeTab === '/chat') {
-      setActiveTab(lastActiveTab); // Go back to the last active tab excluding search
-    } else {
-      setCollapsed(true); // Collapse sidebar for chat
-      setActiveTab('/chat'); // Set chat as active
-    }
+    setCollapsed(!isCollapsed); // Toggle collapse state based on search panel
   };
 
   const handleCreateClick = () => {
-    setCreatePostOpen(true); // Open the CreatePost dialog
+    setCreatePostOpen(true);
   };
 
   const handleCreatePostClose = () => {
-    setCreatePostOpen(false); // Close the CreatePost dialog
+    setCreatePostOpen(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const username = localStorage.getItem('username');
+
+      await axios.post('http://localhost:8000/api/v1/users/logout',
+        { username },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('username');
+
+      toast.success('Successfully logged out!', {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+
+    } catch (error) {
+      console.error("Logout failed:", error);
+      toast.error('Logout failed!', {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+    }
   };
 
   const fullNav = (
@@ -154,7 +183,7 @@ const SideNav = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '30px', // Added more space between logo and items
+            marginBottom: '30px',
           }}
         >
           <Link to={activeTab}>
@@ -180,12 +209,6 @@ const SideNav = () => {
             </ListItemIcon>
             {!isCollapsed && <ListItemText primary="Search" />}
           </StyledListItem>
-          <StyledListItem button onClick={handleChatClick} component={Link} to="/chat" isCollapsed={isCollapsed}>
-            <ListItemIcon sx={{ minWidth: '35px' }}>
-              <ChatIcon fontSize="large" />
-            </ListItemIcon>
-            {!isCollapsed && <ListItemText primary="Chat" />}
-          </StyledListItem>
           <StyledListItem button onClick={handleCreateClick} isCollapsed={isCollapsed}>
             <ListItemIcon sx={{ minWidth: '35px' }}>
               <CreateIcon fontSize="large" />
@@ -200,18 +223,11 @@ const SideNav = () => {
           </StyledListItem>
         </List>
       </Box>
-      <StyledListItem
-        button
-        sx={{ marginBottom: '1rem' }}
-        onClick={handleMoreClick}
-        isCollapsed={isCollapsed}
-      >
-        <ListItemIcon sx={{ minWidth: '35px', color: '#a81434' }}> {/* Ruby color for More icon */}
-          <MenuIcon fontSize="large" />
+      <StyledListItem button onClick={handleLogout} sx={{ position: 'relative', bottom: '20px', justifyContent: 'center' }} isCollapsed={isCollapsed}>
+        <ListItemIcon sx={{ minWidth: '35px', justifyContent: 'center' }}>
+          <StyledLogoutIcon />
         </ListItemIcon>
-        {!isCollapsed && <ListItemText primary="More" />}
       </StyledListItem>
-      <More isMoreOpen={isMoreOpen} setIsMoreOpen={setIsMoreOpen} />
     </Box>
   );
 
@@ -236,27 +252,24 @@ const SideNav = () => {
       <ListItem button onClick={handleSearchClick}>
         <ListItemIcon><SearchIcon /></ListItemIcon>
       </ListItem>
-      <ListItem button onClick={handleChatClick}>
-        <ListItemIcon><ChatIcon /></ListItemIcon>
-      </ListItem>
       <ListItem button onClick={handleCreateClick}>
         <ListItemIcon><CreateIcon /></ListItemIcon>
       </ListItem>
       <ListItem button component={Link} to="/feed">
         <ListItemIcon><ExploreIcon /></ListItemIcon>
       </ListItem>
-      <ListItem button onClick={handleMoreClick}>
-        <ListItemIcon><MenuIcon /></ListItemIcon>
+      <ListItem button onClick={handleLogout}>
+        <ListItemIcon><StyledLogoutIcon /></ListItemIcon>
       </ListItem>
-      <More isMoreOpen={isMoreOpen} setIsMoreOpen={setIsMoreOpen} />
     </Box>
   );
 
   return (
     <>
       {isSmallScreen ? bottomNav : fullNav}
-      <SearchPanel open={isSearchOpen} onClose={() => setSearchOpen(false)} /> {/* Added close function */}
+      <SearchPanel open={isSearchOpen} onClose={() => { setSearchOpen(false); setCollapsed(false); }} /> {/* Added reset collapse */}
       <CreatePost open={isCreatePostOpen} onClose={handleCreatePostClose} /> {/* Render CreatePost dialog */}
+      <ToastContainer /> {/* Add ToastContainer for toast notifications */}
     </>
   );
 };

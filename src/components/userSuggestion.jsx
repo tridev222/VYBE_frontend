@@ -11,7 +11,6 @@ const UserSuggestions = () => {
   const [followedUsers, setFollowedUsers] = useState(new Set());
   const [loggedInUserId, setLoggedInUserId] = useState(null);
 
-  // Fetch the logged-in user's ID using the access token
   const fetchLoggedInUserId = useCallback(async () => {
     try {
       const response = await axios.get('http://localhost:8000/api/v1/auth/me', {
@@ -61,10 +60,8 @@ const UserSuggestions = () => {
         },
       });
 
-      // Filter out the logged-in user based on ID
       const filteredSuggestions = response.data.data.filter(user => user._id !== loggedInUserId);
 
-      // Fetch profile pictures for each user
       const usersWithProfilePics = await Promise.all(
         filteredSuggestions.map(async (user) => {
           const profilePicture = await fetchProfilePicture(user.username);
@@ -140,6 +137,16 @@ const UserSuggestions = () => {
       fetchSuggestions();
     }
   }, [loggedInUserId, fetchFollowedUsers, fetchSuggestions]);
+
+  // Auto-refresh suggestions every 60 seconds
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchSuggestions();
+      fetchFollowedUsers();
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+  }, [fetchSuggestions, fetchFollowedUsers]);
 
   return (
     <Box sx={{ width: 300, padding: 2 }}>

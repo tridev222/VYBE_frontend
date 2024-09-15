@@ -1,70 +1,23 @@
-# Getting Started with Create React App
-
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
-
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+HERE ARE THE SNAPSHOTS OF THE CURRENT STATUS OF THE PROJECT FEEL FREE TO FORK AND SUGGEESTION TO ADD AND FEEDBACKS THANK YOU!!
+AUTH PAGE
+![Screenshot 2024-08-31 105704](https://github.com/user-attachments/assets/f6550c3c-f2a1-428e-b947-67e2c686408a)
+LOGIN
+![Screenshot 2024-08-31 105716](https://github.com/user-attachments/assets/dc4f6f6c-674e-4a9a-815f-b311c251ce49)
+SIGN UP
+![Screenshot 2024-08-31 105732](https://github.com/user-attachments/assets/d583c83f-2101-4099-8547-30d25644e764)
+PROFILE
+![Screenshot 2024-08-31 110317](https://github.com/user-attachments/assets/c15ab85b-4dca-47a9-a624-c7d00c6a077a)
+EDIT PROFILE
+![Screenshot 2024-08-31 110335](https://github.com/user-attachments/assets/41ec0091-398d-46f8-a89c-a678c94e2eaa)
+CREATE POST POPUP
+![Screenshot 2024-08-31 110355](https://github.com/user-attachments/assets/7e3db89d-409a-4435-9876-2d5536c03fa5)
+SEARCH PANEL
+![Screenshot 2024-08-31 110413](https://github.com/user-attachments/assets/751c013e-a6dc-4726-9966-64a928d1a919)
+EXPLORE FEED WITH USER SUGGESTION
+![Screenshot 2024-08-31 110444](https://github.com/user-attachments/assets/a8cdb5cf-794c-473c-8d51-a824cd5300c4)
+EXPLORE FEED POST POPUP CARD WITH COMMENT
+![Screenshot 2024-08-31 110520](https://github.com/user-attachments/assets/738638bb-5eb8-4024-8dfa-7966b728fcbb)
+HOME PAGE
+![Screenshot 2024-08-31 110545](https://github.com/user-attachments/assets/de2d15c5-9f73-44ce-981a-1339c0c148b1)
+HOME PAGE POST POPUP WITH COMMENT
+![Screenshot 2024-08-31 110626](https://github.com/user-attachments/assets/75d40517-1188-474b-902b-082e0fb2fb76)

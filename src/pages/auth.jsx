@@ -1,11 +1,10 @@
-// src/components/Auth.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Box, Button, TextField, Slide, Link } from '@mui/material';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useNavigate } from 'react-router-dom'; // Ensure you're using react-router for navigation
-import Logo from '../assets/logo_light.png'; // Adjust the import path if needed
+import { useNavigate } from 'react-router-dom'; 
+import Logo from '../assets/logo_light.png'; 
 
 const getButtonStyle = () => ({
   fontSize: '1.5rem',
@@ -21,29 +20,63 @@ const getButtonStyle = () => ({
 function Auth() {
   const [view, setView] = useState('default'); // default, signin, signup
   const [formData, setFormData] = useState({ email: '', username: '', password: '' });
+  const [errors, setErrors] = useState({ email: '', password: '' });
+  const [touched, setTouched] = useState({ email: false, password: false }); // To track interaction for signup fields
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    if (name === 'email') {
+      validateEmail(formData.email);
+    } else if (name === 'password') {
+      validatePassword(formData.password);
+    }
+  };
+
+  const validateEmail = (email) => {
+    const emailValid = email.includes('@');
+    setErrors((prev) => ({
+      ...prev,
+      email: emailValid ? '' : 'Email must include "@"',
+    }));
+    return emailValid;
+  };
+
+  const validatePassword = (password) => {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+    const passwordValid = passwordRegex.test(password);
+    setErrors((prev) => ({
+      ...prev,
+      password: passwordValid
+        ? ''
+        : 'Password must be at least 8 characters long, with one uppercase, one lowercase, and a number.',
+    }));
+    return passwordValid;
+  };
+
   const handleSignUp = async () => {
+    if (!validateEmail(formData.email) || !validatePassword(formData.password)) {
+      toast.error('Please fix the errors before submitting.');
+      return;
+    }
+
     try {
       const response = await axios.post('http://localhost:8000/api/v1/users/signup', formData);
       if (response.status === 201) {
-        toast.success('Signup successful! Redirecting to home page...');
+        toast.success('Signup successful! Now you can login');
         setTimeout(() => {
-          navigate('/'); // Redirect to the home page after signup
+          setView('default'); // Reset to default view
         }, 2000);
       } else {
         toast.warn('Signup succeeded, but there was an issue.');
       }
     } catch (error) {
-      if (error.response && error.response.status === 400) {
-        toast.error(error.response.data.message || 'Signup failed!');
-      } else {
-        toast.error('An unexpected error occurred during signup.');
-      }
+      toast.error('An unexpected error occurred during signup.');
     }
   };
 
@@ -56,17 +89,13 @@ function Auth() {
         localStorage.setItem('username', username);
         toast.success(`Welcome, ${username}! Redirecting to home page...`);
         setTimeout(() => {
-          navigate('/home'); // Redirect to the home page after login
+          navigate('/home'); 
         }, 2000);
       } else {
         toast.warn('Login succeeded, but there was an issue.');
       }
     } catch (error) {
-      if (error.response && error.response.status === 401) {
-        toast.error(error.response.data.message || 'Login failed!');
-      } else {
-        toast.error('An unexpected error occurred during login.');
-      }
+      toast.error('An unexpected error occurred during login.');
     }
   };
 
@@ -84,7 +113,6 @@ function Auth() {
 
   return (
     <Box display="flex" height="100vh" maxHeight={655}>
-      {/* Logo Section */}
       <Box 
         flex={1} 
         display="flex" 
@@ -94,13 +122,13 @@ function Auth() {
           transition: 'transform 0.5s ease',
           transform: view === 'signup' ? 'translateX(100%)' : 'none', 
           cursor: view !== 'default' ? 'pointer' : 'default',
-          zIndex:2
+          zIndex: 2
         }}
         onClick={view !== 'default' ? handleLogoClick : null}
       >
         <img 
           src={Logo} 
-          alt="VYBE logo" 
+          alt="Logo" 
           style={{ 
             width: '25rem', 
             height: 'auto',
@@ -136,9 +164,12 @@ function Auth() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                onBlur={handleBlur} // Trigger validation on blur
                 variant="outlined" 
                 fullWidth 
                 sx={{ marginBottom: '1rem' }} 
+                error={!!errors.email && touched.email} // Show error if field has been touched
+                helperText={touched.email && errors.email}
               />
               <TextField 
                 label="Username" 
@@ -155,9 +186,12 @@ function Auth() {
                 type="password" 
                 value={formData.password}
                 onChange={handleChange}
+                onBlur={handleBlur} // Trigger validation on blur
                 variant="outlined" 
                 fullWidth 
                 sx={{ marginBottom: '1.5rem' }} 
+                error={!!errors.password && touched.password} // Show error if field has been touched
+                helperText={touched.password && errors.password}
               />
               <Button 
                 variant="contained" 
@@ -232,7 +266,7 @@ function Auth() {
                 width: '100%',
                 height: '100%',
                 padding: '0 2rem',
-                boxSizing:"border-box",
+                boxSizing: 'border-box',
               }}
             >
               <TextField 
@@ -271,7 +305,7 @@ function Auth() {
                 onClick={() => setView('signup')}
                 sx={{ color: '#a81434', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
               >
-                Don't have an account? Sign up
+                Don't have an account? Sign Up
               </Link>
             </Box>
           </Slide>

@@ -16,9 +16,10 @@ const SearchPanel = ({ open, onClose }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [followedUsers, setFollowedUsers] = useState(new Set());
-
+  const [followedUsers, setFollowedUsers] = useState(new Set()); // Track users followed
+  const loggedInUsername = localStorage.getItem('username'); // Assuming the logged-in username is stored here
   const accessToken = localStorage.getItem('accessToken');
+  const userId = localStorage.getItem('userId'); // Assuming the current user's ID is stored here
 
   useEffect(() => {
     if (!open) {
@@ -31,7 +32,7 @@ const SearchPanel = ({ open, onClose }) => {
     try {
       const response = await apiClient.get(`/users/${username}`, {
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 
@@ -50,9 +51,9 @@ const SearchPanel = ({ open, onClose }) => {
     setLoading(true);
     try {
       const response = await apiClient.get(`/users/search`, {
-        params: { query: query },
+        params: { query },
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 
@@ -79,63 +80,31 @@ const SearchPanel = ({ open, onClose }) => {
     }
   };
 
-  const getUserIdByUsername = async (username) => {
+  const handleFollowUnfollow = async (username) => {
     try {
-      const response = await apiClient.get(`/users/${username}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-      });
+      const response = await apiClient.put(
+        `/users/${username}/follow`,  // Follow/unfollow endpoint
+        { userId },  // Send userId in the body
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,  // Include the auth token
+          },
+        }
+      );
 
       if (response.status === 200) {
-        return response.data.data.__id;
-      } else {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-    } catch (error) {
-      console.error('Error fetching user ID:', error);
-    }
-  };
-
-  const handleFollow = async (username) => {
-    try {
-      const userIdToFollow = await getUserIdByUsername(username);
-      const response = await apiClient.put(`/users/${username}/follow`, {}, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-      });
-
-      if (response.status === 200) {
-        setFollowedUsers(prev => new Set(prev).add(userIdToFollow));
-      } else {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-    } catch (error) {
-      console.error('Error following user:', error);
-    }
-  };
-
-  const handleUnfollow = async (username) => {
-    try {
-      const userIdToUnfollow = await getUserIdByUsername(username);
-      const response = await apiClient.put(`/users/${username}/unfollow`, {}, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-      });
-
-      if (response.status === 200) {
-        setFollowedUsers(prev => {
+        setFollowedUsers((prev) => {
           const updated = new Set(prev);
-          updated.delete(userIdToUnfollow);
+          if (followedUsers.has(username)) {
+            updated.delete(username);  // Unfollow
+          } else {
+            updated.add(username);  // Follow
+          }
           return updated;
         });
-      } else {
-        throw new Error(`HTTP error! Status: ${response.status}`);
       }
     } catch (error) {
-      console.error('Error unfollowing user:', error);
+      console.error('Error following/unfollowing user:', error);
     }
   };
 
@@ -207,34 +176,36 @@ const SearchPanel = ({ open, onClose }) => {
             <CircularProgress />
           </Box>
         ) : results.length > 0 ? (
-          <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>  {/* Enable scrolling */}
+          <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>
             {results.map((user) => (
               <Box key={user._id} sx={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
                 <Avatar
-                  src={user.profilePicture || defaultProfileImage} // Use the user's profile picture or default
+                  src={user.profilePicture || defaultProfileImage}
                   alt={user.username}
                   sx={{ width: 50, height: 50, marginRight: 1, borderRadius: '50%' }}
                 />
                 <Typography variant="body1" sx={{ flexGrow: 1 }}>
                   {user.username}
                 </Typography>
-                <Button
-                  variant="outlined"
-                  color={followedUsers.has(user._id) ? 'success' : 'primary'}
-                  onClick={() =>
-                    followedUsers.has(user._id) ? handleUnfollow(user.username) : handleFollow(user.username)
-                  }
-                  sx={{
-                    color: followedUsers.has(user._id) ? 'lightgrey' : 'inherit',
-                    borderRadius: '20px',
-                    fontSize: '0.75rem',
-                    padding: '4px 8px',
-                    textTransform: 'none',
-                    minWidth: '80px',
-                  }}
-                >
-                  {followedUsers.has(user._id) ? 'Following' : 'Follow'}
-                </Button>
+
+                {/* Show button only if the user is not the logged-in user */}
+                {user.username !== loggedInUsername && (
+                  <Button
+                    variant="outlined"
+                    color={followedUsers.has(user.username) ? 'success' : 'primary'}
+                    onClick={() => handleFollowUnfollow(user.username)}
+                    sx={{
+                      color: followedUsers.has(user.username) ? 'lightgrey' : 'inherit',
+                      borderRadius: '20px',
+                      fontSize: '0.75rem',
+                      padding: '4px 8px',
+                      textTransform: 'none',
+                      minWidth: '80px',
+                    }}
+                  >
+                    {followedUsers.has(user.username) ? 'Following' : 'Follow'}
+                  </Button>
+                )}
               </Box>
             ))}
           </Box>

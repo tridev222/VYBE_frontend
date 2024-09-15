@@ -91,7 +91,7 @@ export default function Profile() {
     fetchUserProfile();
 
     // Set up an interval to refresh followers, following counts, and posts every 30 seconds
-    const intervalId = setInterval(fetchUserProfile, 30000);
+    const intervalId = setInterval(fetchUserProfile, 1000);
 
     return () => clearInterval(intervalId); // Cleanup interval on component unmount
   }, []);
@@ -180,65 +180,67 @@ export default function Profile() {
             </Typography>
           ) : (
             user.posts.length > 0 ? (
-              user.posts.map((post, index) => (
-                <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Card 
-                    sx={{
-                      position: 'relative',
-                      width: '100%',
-                      height: 0,
-                      paddingBottom: '75%',
-                      boxShadow: 3,
-                      overflow: 'hidden',
-                      '&:hover .overlay': {
-                        opacity: 1,
-                      }
-                    }}
-                  >
-                    <CardMedia
-                      component="img"
-                      image={post.imgurl}
-                      alt={`Post ${index + 1}`}
+              user.posts
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) // Sorting posts by date in descending order
+                .map((post, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
+                    <Card 
                       sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
+                        position: 'relative',
                         width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        transition: 'transform 0.3s ease-in-out',
-                        '&:hover': {
-                          transform: 'scale(1.1)',
-                        },
-                      }}
-                    />
-                    <Box
-                      className="overlay"
-                      sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        color: 'white',
-                        opacity: 0,
-                        transition: 'opacity 0.3s ease-in-out',
+                        height: 0,
+                        paddingBottom: '75%',
+                        boxShadow: 3,
+                        overflow: 'hidden',
+                        '&:hover .overlay': {
+                          opacity: 1,
+                        }
                       }}
                     >
-                      <Box sx={{ textAlign: 'center' }}>
-                        <FavoriteIcon fontSize="small" />
-                        <Typography>{post.likes?.length || 0} Likes</Typography>
-                        <CommentIcon fontSize="small" />
-                        <Typography>{post.comments?.length || 0} Comments</Typography>
+                      <CardMedia
+                        component="img"
+                        image={post.imgurl}
+                        alt={`Post ${index + 1}`}
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          transition: 'transform 0.3s ease-in-out',
+                          '&:hover': {
+                            transform: 'scale(1.1)',
+                          },
+                        }}
+                      />
+                      <Box
+                        className="overlay"
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          color: 'white',
+                          opacity: 0,
+                          transition: 'opacity 0.3s ease-in-out',
+                        }}
+                      >
+                        <Box sx={{ textAlign: 'center' }}>
+                          <FavoriteIcon fontSize="small" />
+                          <Typography>{post.likes?.length || 0} Likes</Typography>
+                          <CommentIcon fontSize="small" />
+                          <Typography>{post.comments?.length || 0} Comments</Typography>
+                        </Box>
                       </Box>
-                    </Box>
-                  </Card>
-                </Grid>
-              ))
+                    </Card>
+                  </Grid>
+                ))
             ) : (
               <Typography 
                 sx={{ 

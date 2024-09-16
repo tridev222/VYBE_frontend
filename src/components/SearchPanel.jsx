@@ -17,9 +17,48 @@ const SearchPanel = ({ open, onClose }) => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [followedUsers, setFollowedUsers] = useState(new Set()); // Track users followed
+  const [userId, setUserId] = useState(null); // Track the userId after fetching it
+
   const loggedInUsername = localStorage.getItem('username'); // Assuming the logged-in username is stored here
   const accessToken = localStorage.getItem('accessToken');
-  const userId = localStorage.getItem('userId'); // Assuming the current user's ID is stored here
+
+  // Fetch userId and the list of followed users using the loggedInUsername
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (loggedInUsername) {
+        try {
+          const response = await apiClient.get(`/users/${loggedInUsername}`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+          if (response.status === 200) {
+            const userData = response.data.data;
+            setUserId(userData._id); // Save the fetched userId
+
+            // Fetch the list of followed users
+            const followingsResponse = await apiClient.get(`/users/${loggedInUsername}/followings`, {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            });
+
+            if (followingsResponse.status === 200) {
+              const followingsList = followingsResponse.data.data;
+              const followedUsernames = new Set(followingsList.map(user => user.username)); // Store followed usernames in a Set
+              setFollowedUsers(followedUsernames);
+            }
+          } else {
+            console.error('Failed to fetch user ID and followings');
+          }
+        } catch (error) {
+          console.error('Error fetching user data and followings:', error);
+        }
+      }
+    };
+
+    fetchUserData();
+  }, [loggedInUsername, accessToken]); // Fetch when the component mounts or loggedInUsername changes
 
   useEffect(() => {
     if (!open) {
@@ -82,9 +121,15 @@ const SearchPanel = ({ open, onClose }) => {
 
   const handleFollowUnfollow = async (username) => {
     try {
+      if (!userId) {
+        console.error('User ID not found');
+        return;
+      }
+
+      // Send the PUT request with explicit body
       const response = await apiClient.put(
         `/users/${username}/follow`,  // Follow/unfollow endpoint
-        { userId },  // Send userId in the body
+        { userId },  // Explicitly set userId in the body
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,  // Include the auth token

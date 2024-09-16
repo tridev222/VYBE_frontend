@@ -2,8 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { Box, Typography, List, ListItem, ListItemAvatar, Avatar, ListItemText, Button, Divider, Link, IconButton } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import defaultProfileImage from '../assets/default_profile.jpg'; // Use the same default avatar path as SearchPanel
 
-const defaultAvatar = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIj4KICA8Y2lyY2xlIGN4PSI3MCIgY3k9IjcwIiByPSI3MCIgc3Ryb2tlLXdpZHRoPSIxIiBzdHJva2UtY29sb3I9InJnYmEiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==';
 const accessToken = localStorage.getItem('accessToken');
 
 const UserSuggestions = () => {
@@ -11,6 +11,7 @@ const UserSuggestions = () => {
   const [followedUsers, setFollowedUsers] = useState(new Set());
   const [loggedInUserId, setLoggedInUserId] = useState(null);
 
+  // Fetch the logged-in user's ID
   const fetchLoggedInUserId = useCallback(async () => {
     try {
       const response = await axios.get('http://localhost:8000/api/v1/auth/me', {
@@ -24,6 +25,7 @@ const UserSuggestions = () => {
     }
   }, []);
 
+  // Fetch the list of followed users
   const fetchFollowedUsers = useCallback(async () => {
     try {
       const response = await axios.get(`http://localhost:8000/api/v1/users/${loggedInUserId}/following`, {
@@ -38,20 +40,7 @@ const UserSuggestions = () => {
     }
   }, [loggedInUserId]);
 
-  const fetchProfilePicture = useCallback(async (username) => {
-    try {
-      const response = await axios.get(`http://localhost:8000/api/v1/users/${username}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      return response.data.data.profilePicture || defaultAvatar;
-    } catch (error) {
-      console.error('Error fetching profile picture:', error);
-      return defaultAvatar;
-    }
-  }, []);
-
+  // Fetch user suggestions, excluding followed users
   const fetchSuggestions = useCallback(async () => {
     try {
       const response = await axios.get('http://localhost:8000/api/v1/users/suggest/random', {
@@ -60,8 +49,11 @@ const UserSuggestions = () => {
         },
       });
 
-      const filteredSuggestions = response.data.data.filter(user => user._id !== loggedInUserId);
+      const filteredSuggestions = response.data.data
+        .filter(user => user._id !== loggedInUserId) // Exclude the logged-in user
+        .filter(user => !followedUsers.has(user._id)); // Exclude followed users
 
+      // Fetch profile pictures for the suggestions
       const usersWithProfilePics = await Promise.all(
         filteredSuggestions.map(async (user) => {
           const profilePicture = await fetchProfilePicture(user.username);
@@ -73,8 +65,24 @@ const UserSuggestions = () => {
     } catch (error) {
       console.error('Error fetching user suggestions:', error);
     }
-  }, [loggedInUserId, fetchProfilePicture]);
+  }, [loggedInUserId, followedUsers]); // Add followedUsers as a dependency
 
+  // Fetch a user's profile picture by username
+  const fetchProfilePicture = async (username) => {
+    try {
+      const response = await axios.get(`http://localhost:8000/api/v1/users/${username}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      return response.data.data.profilePicture || defaultProfileImage;
+    } catch (error) {
+      console.error('Error fetching profile picture:', error);
+      return defaultProfileImage;
+    }
+  };
+
+  // Handle follow action
   const handleFollow = async (username) => {
     try {
       const userIdToFollow = await getUserIdByUsername(username);
@@ -92,6 +100,7 @@ const UserSuggestions = () => {
     }
   };
 
+  // Handle unfollow action
   const handleUnfollow = async (username) => {
     try {
       const userIdToUnfollow = await getUserIdByUsername(username);
@@ -113,6 +122,7 @@ const UserSuggestions = () => {
     }
   };
 
+  // Get the user ID by their username
   const getUserIdByUsername = useCallback(async (username) => {
     try {
       const response = await axios.get(`/api/v1/users/${username}`, {
@@ -161,35 +171,41 @@ const UserSuggestions = () => {
       </Box>
 
       <List>
-        {suggestions.map(user => (
-          <ListItem key={user._id} sx={{ paddingY: 1 }}>
-            <ListItemAvatar>
-              <Avatar 
-                src={user.profilePicture || 'person/noAvatar.png'} 
-                alt={user.username} 
-                onError={(e) => e.currentTarget.src = defaultAvatar}
-              />
-            </ListItemAvatar>
-            <ListItemText primary={user.username} secondary={user.recommendation} />
-            <Button
-              variant="outlined"
-              color={followedUsers.has(user._id) ? 'success' : 'primary'}
-              onClick={() =>
-                followedUsers.has(user._id) ? handleUnfollow(user.username) : handleFollow(user.username)
-              }
-              sx={{
-                color: followedUsers.has(user._id) ? 'lightgrey' : 'inherit',
-                borderRadius: '20px',
-                fontSize: '0.75rem',
-                padding: '4px 8px',
-                textTransform: 'none',
-                minWidth: '80px',
-              }}
-            >
-              {followedUsers.has(user._id) ? 'Following' : 'Follow'}
-            </Button>
-          </ListItem>
-        ))}
+        {suggestions.length > 0 ? (
+          suggestions.map(user => (
+            <ListItem key={user._id} sx={{ paddingY: 1 }}>
+              <ListItemAvatar>
+                <Avatar 
+                  src={user.profilePicture || defaultProfileImage} 
+                  alt={user.username} 
+                  onError={(e) => e.currentTarget.src = defaultProfileImage} // Handle error
+                />
+              </ListItemAvatar>
+              <ListItemText primary={user.username} secondary={user.recommendation} />
+              <Button
+                variant="outlined"
+                color={followedUsers.has(user._id) ? 'success' : 'primary'}
+                onClick={() =>
+                  followedUsers.has(user._id) ? handleUnfollow(user.username) : handleFollow(user.username)
+                }
+                sx={{
+                  color: followedUsers.has(user._id) ? 'lightgrey' : 'inherit',
+                  borderRadius: '20px',
+                  fontSize: '0.75rem',
+                  padding: '4px 8px',
+                  textTransform: 'none',
+                  minWidth: '80px',
+                }}
+              >
+                {followedUsers.has(user._id) ? 'Following' : 'Follow'}
+              </Button>
+            </ListItem>
+          ))
+        ) : (
+          <Typography variant="body2" color="textSecondary">
+            No suggestions available
+          </Typography>
+        )}
       </List>
 
       <Divider sx={{ marginY: 3 }} />

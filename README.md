@@ -46,9 +46,6 @@ npm install
 # If using separate folders for frontend/backend:
 cd client
 npm install
-
-cd ../server
-npm install
 npm start
 
 ```

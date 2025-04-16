@@ -1,14 +1,3 @@
-Absolutely! Here's a full, cleaned-up version of a professional `README.md` for your project that includes:
-
-- 📌 Project introduction  
-- ⚙️ How to set it up  
-- 🚀 How to run it  
-- 🖼️ UI screenshots  
-- 🙌 Feedback invitation  
-
----
-
-```markdown
 # 📷 Social Media Web App
 
 A full-stack social media web application where users can sign up, log in, create posts, interact with other users, and explore content. Built to offer a smooth and engaging user experience with modern UI/UX design and essential features found in popular platforms like Instagram or Twitter.

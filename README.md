@@ -86,21 +86,3 @@ npm start
 ![Home Post Popup](https://github.com/user-attachments/assets/75d40517-1188-474b-902b-082e0fb2fb76)
 
 ---
-
-## 🤝 Contributing & Feedback
-
-Have suggestions, feature requests, or feedback?  
-Feel free to **fork the repo**, open issues, or submit a pull request.
-
-Thanks for checking this project out! 🙌
-
----
-
-## 📄 License
-
-This project is open-source and available under the [MIT License](LICENSE).
-```
-
----
-
-Let me know if you want me to generate badges (like for build, license, etc.) or help you with auto-deploy setup for Vercel/Render/Netlify.
